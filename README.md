@@ -22,26 +22,29 @@ Aucune construction locale n’est requise: il suffit de récupérer l’image e
 - `INFOMANIAK_DDNS_HOSTNAME` (obligatoire) — Nom d’hôte complet à mettre à jour (ex: `sub.domaine.tld`)
 - `INFOMANIAK_DDNS_USERNAME` (obligatoire) — Identifiant/compte Infomaniak (ou token si applicable)
 - `INFOMANIAK_DDNS_PASSWORD` (obligatoire) — Mot de passe/token
-- `DDNS_INTERVAL_SECONDS` (optionnel, défaut: `300`) — Intervalle entre deux vérifications (min 15s)
+- `DDNS_INTERVAL_SECONDS` (optionnel, défaut: `300`) — Intervalle entre deux vérifications (min 15s). Recommandé ≥ 300s en prod.
 - `DDNS_ENABLE_IPV6` (optionnel, défaut: `false`) — Activer la gestion IPv6 (`true`/`false`)
+- `PYTHONUNBUFFERED` (optionnel) — Mettre `"1"` pour des logs non bufferisés (affichage immédiat)
 
-Astuce Portainer: vous pouvez définir des variables intermédiaires (ex: `INFOMANIAK_DDNS_HOSTNAME_ENV`) et les référencer dans `docker-compose.yml` via `${…}`.
+Astuce Portainer: définissez des variables intermédiaires (ex: `INFOMANIAK_DDNS_HOSTNAME_ENV`) et référencez-les dans `docker-compose.yml` via `${…}`. Note: le `.env` du dépôt n’est pas lu automatiquement par Portainer; renseignez les variables dans la Stack.
 
 ## Démarrage rapide (Docker Compose / Portainer)
-Exemple minimal (valeurs en dur):
+Exemple minimal (valeurs en dur, syntaxe mapping recommandée):
 
 ```yaml
+version: "3.9"
 services:
   ddns:
     image: ghcr.io/laxe4k/ddns-infomaniak:latest
     container_name: ddns-infomaniak
     restart: unless-stopped
     environment:
-      - INFOMANIAK_DDNS_HOSTNAME=example.domain.tld
-      - INFOMANIAK_DDNS_USERNAME=mon-user
-      - INFOMANIAK_DDNS_PASSWORD=mon-mot-de-passe-ou-token
-      - DDNS_INTERVAL_SECONDS=300
-      - DDNS_ENABLE_IPV6=false
+      INFOMANIAK_DDNS_HOSTNAME: "example.domain.tld"
+      INFOMANIAK_DDNS_USERNAME: "mon-user"
+      INFOMANIAK_DDNS_PASSWORD: "mon-mot-de-passe-ou-token"
+      DDNS_INTERVAL_SECONDS: "300"
+      DDNS_ENABLE_IPV6: "false"
+      PYTHONUNBUFFERED: "1"
 ```
 
 Exemple avec variables Portainer/Compose (références `${…}`), comme dans ce dépôt:
@@ -54,11 +57,12 @@ services:
     container_name: ddns-infomaniak
     restart: unless-stopped
     environment:
-      - INFOMANIAK_DDNS_HOSTNAME=${INFOMANIAK_DDNS_HOSTNAME_ENV}
-      - INFOMANIAK_DDNS_USERNAME=${INFOMANIAK_DDNS_USERNAME_ENV}
-      - INFOMANIAK_DDNS_PASSWORD=${INFOMANIAK_DDNS_PASSWORD_ENV}
-      - DDNS_INTERVAL_SECONDS=300
-      - DDNS_ENABLE_IPV6=false
+      INFOMANIAK_DDNS_HOSTNAME: "${INFOMANIAK_DDNS_HOSTNAME_ENV}"
+      INFOMANIAK_DDNS_USERNAME: "${INFOMANIAK_DDNS_USERNAME_ENV}"
+      INFOMANIAK_DDNS_PASSWORD: "${INFOMANIAK_DDNS_PASSWORD_ENV}"
+      DDNS_INTERVAL_SECONDS: "60"   # pour tests; remettez 300+ en prod
+      DDNS_ENABLE_IPV6: "false"
+      PYTHONUNBUFFERED: "1"
 ```
 
 - Dans Portainer (Stacks): collez le Compose, définissez les variables `${…}` dans la section dédiée puis déployez.
@@ -75,6 +79,7 @@ docker run -d --name ddns-infomaniak --restart unless-stopped \
   -e INFOMANIAK_DDNS_PASSWORD=mon-mot-de-passe-ou-token \
   -e DDNS_INTERVAL_SECONDS=300 \
   -e DDNS_ENABLE_IPV6=false \
+  -e PYTHONUNBUFFERED=1 \
   ghcr.io/laxe4k/ddns-infomaniak:latest
 ```
 
