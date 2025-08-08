@@ -1,91 +1,105 @@
-# Infomaniak DDNS Updater
+# Infomaniak DDNS Updater (Python + Docker)
 
-This Python script automatically updates your Infomaniak DNS records with your current public IP address. It supports both IPv4 and IPv6.
+Service léger qui met automatiquement à jour votre enregistrement DNS Infomaniak avec votre IP publique actuelle. Fonctionne en continu, supporte IPv4 et (optionnel) IPv6.
 
-## Features
+## Fonctionnalités
+- Récupération périodique de l’IP publique (IPv4 / IPv6)
+- Comparaison avec l’IP DNS existante et mise à jour uniquement si nécessaire
+- Intervalle configurable et protection anti-spam API
+- Exécutable en conteneur (Docker / Portainer) ou en Python natif
 
-*   Retrieves current public IPv4 and IPv6 addresses.
-*   Compares current public IP with the IP resolved from the configured hostname.
-*   Updates Infomaniak DNS record if the IP address has changed.
-*   Configurable via environment variables.
-*   Docker support for easy deployment.
+## Image Docker officielle (GHCR)
+L’image est construite et publiée automatiquement via GitHub Actions.
+- Registry: `ghcr.io/laxe4k/ddns-infomaniak`
+- Tags:
+  - `latest` (publie sur tag Git)
+  - `dev` (sur branches `dev/*`)
+  - `x.y.z` (correspondant aux tags Git)
 
-## Prerequisites
+Aucune construction locale n’est requise: il suffit de récupérer l’image et de configurer les variables d’environnement.
 
-*   Python 3.x
-*   `requests` Python library
+## Variables d’environnement
+- `INFOMANIAK_DDNS_HOSTNAME` (obligatoire) — Nom d’hôte complet à mettre à jour (ex: `sub.domaine.tld`)
+- `INFOMANIAK_DDNS_USERNAME` (obligatoire) — Identifiant/compte Infomaniak (ou token si applicable)
+- `INFOMANIAK_DDNS_PASSWORD` (obligatoire) — Mot de passe/token
+- `DDNS_INTERVAL_SECONDS` (optionnel, défaut: `300`) — Intervalle entre deux vérifications (min 15s)
+- `DDNS_ENABLE_IPV6` (optionnel, défaut: `false`) — Activer la gestion IPv6 (`true`/`false`)
 
-## Configuration
+Astuce Portainer: vous pouvez définir des variables intermédiaires (ex: `INFOMANIAK_DDNS_HOSTNAME_ENV`) et les référencer dans `docker-compose.yml` via `${…}`.
 
-The script is configured using environment variables. Create a `.env` file in the project root or set these variables in your environment:
+## Démarrage rapide (Docker Compose / Portainer)
+Exemple minimal (valeurs en dur):
 
-*   `INFOMANIAK_DDNS_HOSTNAME`: The hostname you want to update (e.g., `yourdomain.com` or `sub.yourdomain.com`).
-*   `INFOMANIAK_DDNS_USERNAME`: Your Infomaniak API username (often the same as your login).
-*   `INFOMANIAK_DDNS_PASSWORD`: Your Infomaniak API password or a token if supported.
-
-Example `.env` file:
-```
-INFOMANIAK_DDNS_USERNAME=your_username
-INFOMANIAK_DDNS_PASSWORD=your_password
-INFOMANIAK_DDNS_HOSTNAME=your.domain.com
-```
-
-## Usage
-
-### Running directly
-
-1.  Ensure Python 3 and `pip` are installed.
-2.  Install the required library:
-    ```sh
-    pip install -r requirements.txt
-    ```
-3.  Set the environment variables as described in the Configuration section (e.g., by creating a `.env` file or exporting them in your shell).
-4.  Run the script:
-    ```sh
-    python ddns.py
-    ```
-
-### Running with Docker
-
-1.  Build the Docker image:
-    ```sh
-    docker build -t infomaniak-ddns .
-    ```
-2.  Run the Docker container, passing the environment variables:
-    ```sh
-    docker run --rm \
-      -e INFOMANIAK_DDNS_HOSTNAME="your.domain.com" \
-      -e INFOMANIAK_DDNS_USERNAME="your_username" \
-      -e INFOMANIAK_DDNS_PASSWORD="your_password" \
-      infomaniak-ddns
-    ```
-    Alternatively, you can use an environment file with Docker:
-    ```sh
-    docker run --rm --env-file .env infomaniak-ddns
-    ```
-
-By default, the script processes IPv4 updates. To enable IPv6 updates, you will need to uncomment the relevant line in the `ddns.py` script:
-```python
-// filepath: a:\kDrive\Développement\Laxe4k\ddns\ddns.py
-// ...existing code...
-    # Traitement IPv4
-    process_ddns_update(4, target_hostname, infomaniak_username, infomaniak_password, ipaddress)
-
-    # Traitement IPv6 - Comment out this line to skip IPv6 processing
-    process_ddns_update(6, target_hostname, infomaniak_username, infomaniak_password, ipaddress) # Uncomment this line
-
-    print("\nScript terminé.")
+```yaml
+services:
+  ddns:
+    image: ghcr.io/laxe4k/ddns-infomaniak:latest
+    container_name: ddns-infomaniak
+    restart: unless-stopped
+    environment:
+      - INFOMANIAK_DDNS_HOSTNAME=example.domain.tld
+      - INFOMANIAK_DDNS_USERNAME=mon-user
+      - INFOMANIAK_DDNS_PASSWORD=mon-mot-de-passe-ou-token
+      - DDNS_INTERVAL_SECONDS=300
+      - DDNS_ENABLE_IPV6=false
 ```
 
-## Project Files
+Exemple avec variables Portainer/Compose (références `${…}`), comme dans ce dépôt:
 
-*   [`ddns.py`](a:\kDrive\Développement\Laxe4k\ddns\ddns.py): The main Python script for DDNS updates.
-*   [`Dockerfile`](a:\kDrive\Développement\Laxe4k\ddns\Dockerfile): For building the Docker image.
-*   [`requirements.txt`](a:\kDrive\Développement\Laxe4k\ddns\requirements.txt): Python dependencies.
-*   [`.env`](a:\kDrive\Développement\Laxe4k\ddns\.env): Example environment variable file (ignored by Git).
-*   [`LICENSE`](a:\kDrive\Développement\Laxe4k\ddns\LICENSE): Project license.
-*   [`README.md`](a:\kDrive\Développement\Laxe4k\ddns\README.md): This file.
+```yaml
+version: "3.9"
+services:
+  ddns:
+    image: ghcr.io/laxe4k/ddns-infomaniak:latest
+    container_name: ddns-infomaniak
+    restart: unless-stopped
+    environment:
+      - INFOMANIAK_DDNS_HOSTNAME=${INFOMANIAK_DDNS_HOSTNAME_ENV}
+      - INFOMANIAK_DDNS_USERNAME=${INFOMANIAK_DDNS_USERNAME_ENV}
+      - INFOMANIAK_DDNS_PASSWORD=${INFOMANIAK_DDNS_PASSWORD_ENV}
+      - DDNS_INTERVAL_SECONDS=300
+      - DDNS_ENABLE_IPV6=false
+```
 
-## License
+- Dans Portainer (Stacks): collez le Compose, définissez les variables `${…}` dans la section dédiée puis déployez.
+- Suivre les logs: `docker logs -f ddns-infomaniak`
 
-This project is licensed under the MIT License - see the [LICENSE](a:\kDrive\Développement\Laxe4k\ddns\LICENSE) file for details.
+## Démarrage rapide (Docker CLI)
+- Récupérer l’image: `docker pull ghcr.io/laxe4k/ddns-infomaniak:latest`
+- Lancer:
+
+```bash
+docker run -d --name ddns-infomaniak --restart unless-stopped \
+  -e INFOMANIAK_DDNS_HOSTNAME=example.domain.tld \
+  -e INFOMANIAK_DDNS_USERNAME=mon-user \
+  -e INFOMANIAK_DDNS_PASSWORD=mon-mot-de-passe-ou-token \
+  -e DDNS_INTERVAL_SECONDS=300 \
+  -e DDNS_ENABLE_IPV6=false \
+  ghcr.io/laxe4k/ddns-infomaniak:latest
+```
+
+## Exécution locale (facultatif, sans Docker)
+1) Prérequis: Python 3.13+ et `pip`
+2) Installation: `pip install -r requirements.txt`
+3) Exportez les variables d’environnement (voir plus haut)
+4) Lancer: `python main.py`
+
+## Détails de fonctionnement
+- Boucle continue avec intervalle configurable (min. 15s)
+- Validation IPv6 (si activée) via le module `ipaddress`
+- User-Agent dédié, gestion basique des réponses Infomaniak (`good`, `nochg`, `badauth`, etc.)
+
+## Sécurité
+- Ne versionnez pas votre fichier `.env` (contient des secrets). Utilisez Portainer (variables) ou un coffre.
+- Si des identifiants ont été exposés publiquement, changez-les immédiatement depuis votre compte Infomaniak.
+
+## Structure du projet
+- `main.py` — Point d’entrée, démarre le service en boucle
+- `models/ddns_client.py` — Client OOP Infomaniak DDNS (logique métier)
+- `docker-compose.yml` — Déploiement Docker/Portainer
+- `Dockerfile` — Image Docker
+- `requirements.txt` — Dépendances Python
+- `LICENSE`, `README.md`
+
+## Licence
+MIT — voir `LICENSE`.
